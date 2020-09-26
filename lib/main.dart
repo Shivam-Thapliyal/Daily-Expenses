@@ -1,7 +1,12 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+
+
 import './widgets/transaction_list.dart';
 import './models/transaction.dart';
 import './widgets/new_transaction.dart';
-import 'package:flutter/material.dart';
 import './widgets/chart.dart';
 
 void main()
@@ -63,6 +68,7 @@ class _MyappState extends State<Myapp> {
         
     //   ),
   ];
+  bool _showChart=false;
   List<Transaction> get _recentTransaction
   {
     return _usertransaction.where((tx)
@@ -74,6 +80,7 @@ class _MyappState extends State<Myapp> {
         );
     }).toList();
   }
+
 
   void _addNewTransaction(String txtitle,double amu,DateTime chosenDate)
   {
@@ -113,35 +120,91 @@ class _MyappState extends State<Myapp> {
   }
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(home:
-    Scaffold(
-      appBar: AppBar(
+    final mediaQuery = MediaQuery.of(context);
+    final _islandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    
+    final PreferredSizeWidget appBar =Platform.isIOS?
+    CupertinoNavigationBar(
+      middle: Text('Daily Expense'),
+      trailing: Row(
+         mainAxisSize: MainAxisSize.min,
+        children:<Widget>[
+          GestureDetector(
+            child: Icon(CupertinoIcons.add),
+            onTap:()=>_startShowAddTransaction(context),
+          )
+        ]
+      ),
+    ):
+    AppBar(
         title: Text('Daily Expense'),
         actions: <Widget>[
           IconButton(icon: Icon(Icons.add),
            onPressed:()=>_startShowAddTransaction(context),
            )
         ],
-      ),
-      body: SingleChildScrollView(
+      );
+      final txList =Container(
+               height: (MediaQuery.of(context).size.height- 
+              appBar.preferredSize.height- MediaQuery.of(context).padding.top )
+              * 0.7,
+               child: TransactionList(_usertransaction,_deleteTransaction)
+               );
+    
+      final pageBar =SafeArea(child:SingleChildScrollView(
               child: Column(
           // mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            Chart(_recentTransaction),
-             TransactionList(_usertransaction,_deleteTransaction),
+            if(_islandscape)Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+              Text("Show Chart",
+              style:Theme.of(context).textTheme.title,
+              ),
+              Switch.adaptive(value: _showChart, onChanged: (val)
+              {
+                setState(() {
+                  _showChart=val;
+                });
+              }
+              )
+            ],
+            ),
+            if(!_islandscape)Container(
+               height: (mediaQuery.size.height- 
+              appBar.preferredSize.height- mediaQuery.padding.top )
+              * 0.3,
+               child: Chart(_recentTransaction),
+               ),
+            if(!_islandscape)txList,
+               if(_islandscape) _showChart
+               ?
+               Container(
+               height: (MediaQuery.of(context).size.height- 
+              appBar.preferredSize.height- MediaQuery.of(context).padding.top )
+              * 0.7,
+               child: Chart(_recentTransaction),
+               ): txList
           ],
           ),
       ),
+      );
+    return Platform.isIOS?CupertinoPageScaffold(
+      child:pageBar,
+      navigationBar: appBar,)
+      : Scaffold(
+      appBar: appBar,
+      body: pageBar,
     
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: Platform.isIOS?Container():
+      FloatingActionButton(
         backgroundColor: Theme.of(context).accentColor,
         child: Icon(Icons.add
         ),
         onPressed:() => _startShowAddTransaction(context),   
       ),
-    ),
     );
   }
 }
